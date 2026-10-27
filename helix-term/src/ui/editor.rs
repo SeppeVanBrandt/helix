@@ -1629,7 +1629,11 @@ impl Component for EditorView {
         };
 
         // -1 for commandline and -1 for bufferline
-        let mut editor_area = area.clip_bottom(1);
+        let mut editor_area = if config.hide_commandline {
+            area
+        } else {
+            area.clip_bottom(1)
+        };
         if use_bufferline {
             editor_area = editor_area.clip_top(1);
         }
@@ -1666,6 +1670,14 @@ impl Component for EditorView {
                 cx.editor.theme.get("ui.text")
             };
 
+            // without a commandline the message takes over the statusline row
+            if config.hide_commandline {
+                surface.clear_with(
+                    area.clip_top(area.height.saturating_sub(1)),
+                    cx.editor.theme.get("ui.background"),
+                );
+            }
+
             surface.set_string(
                 area.x,
                 area.y + area.height.saturating_sub(1),
@@ -1693,14 +1705,29 @@ impl Component for EditorView {
             };
             let restricted = workspace_trust_indicator_visible(cx.editor);
             let trust_width = if restricted { 3 } else { 0 };
+            let pending_x = area.x
+                + area
+                    .width
+                    .saturating_sub(key_width + macro_width + trust_width);
+            let disp = disp
+                .get(disp.len().saturating_sub(key_width as usize)..)
+                .unwrap_or(&disp);
+            // without a commandline, only cover the statusline while keys are pending
+            if config.hide_commandline && !disp.is_empty() {
+                surface.clear_with(
+                    Rect::new(
+                        pending_x,
+                        area.y + area.height.saturating_sub(1),
+                        disp.width() as u16,
+                        1,
+                    ),
+                    cx.editor.theme.get("ui.background"),
+                );
+            }
             surface.set_string(
-                area.x
-                    + area
-                        .width
-                        .saturating_sub(key_width + macro_width + trust_width),
+                pending_x,
                 area.y + area.height.saturating_sub(1),
-                disp.get(disp.len().saturating_sub(key_width as usize)..)
-                    .unwrap_or(&disp),
+                disp,
                 style,
             );
             if restricted {

@@ -15,9 +15,11 @@ impl Component for Info {
         // which evaluate to the most bottom right coordinate.
         let width = self.width + 2 + 2; // +2 for border, +2 for margin
         let height = self.height + 2; // +2 for border
+        // +1 for statusline, +1 for commandline unless hidden
+        let bottom_rows = if cx.editor.config().hide_commandline { 1 } else { 2 };
         let area = viewport.intersection(Rect::new(
             viewport.width.saturating_sub(width),
-            viewport.height.saturating_sub(height + 2), // +2 for statusline
+            viewport.height.saturating_sub(height + bottom_rows),
             width,
             height,
         ));
